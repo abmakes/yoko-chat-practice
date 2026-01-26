@@ -5,11 +5,10 @@ import { OptionButton } from './OptionButton';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, RotateCcw, Trophy } from 'lucide-react';
 
-interface ConversationPracticeProps {
+interface SelectResponsesModeProps {
   conversation: Conversation;
   showVietnamese: boolean;
-  onComplete: () => void;
-  onBack: () => void;
+  onComplete: (scorePercentage: number) => void;
 }
 
 interface Option {
@@ -18,73 +17,48 @@ interface Option {
   isCorrect: boolean;
 }
 
-export function ConversationPractice({ 
+export function SelectResponsesMode({ 
   conversation, 
   showVietnamese, 
-  onComplete,
-  onBack 
-}: ConversationPracticeProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  onComplete 
+}: SelectResponsesModeProps) {
   const [displayedLines, setDisplayedLines] = useState<number[]>([]);
   const [options, setOptions] = useState<Option[]>([]);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(-1);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const lines = conversation.lines;
 
-  // Initialize or move to next line
+  // Find all guest response indices (these are the questions)
+  const guestIndices = lines
+    .map((line, index) => ({ line, index }))
+    .filter(item => item.line.speaker === 'guest')
+    .map(item => item.index);
+
+  // Initialize - display lines up to first guest response
   useEffect(() => {
-    if (currentIndex >= lines.length) {
+    if (guestIndices.length === 0) {
       setIsComplete(true);
       return;
     }
 
-    const currentLine = lines[currentIndex];
+    setTotalQuestions(guestIndices.length);
     
-    // If it's the first line or a staff line, display it automatically
-    if (currentIndex === 0 || currentLine.speaker === 'staff') {
-      setDisplayedLines(prev => [...prev, currentIndex]);
-      
-      // Check if next line exists and is a guest response (needs selection)
-      const nextIndex = currentIndex + 1;
-      if (nextIndex < lines.length && lines[nextIndex].speaker === 'guest') {
-        // Generate options for the guest response
-        setTimeout(() => {
-          const correctLine = lines[nextIndex];
-          const wrongOptions = generateWrongOptions(
-            correctLine.english,
-            lines,
-            'staff'
-          );
-          
-          const allOptions: Option[] = [
-            { text: correctLine.english, vietnamese: correctLine.vietnamese, isCorrect: true },
-            ...wrongOptions.map(text => {
-              const matchingLine = lines.find(l => l.english === text);
-              return { 
-                text, 
-                vietnamese: matchingLine?.vietnamese,
-                isCorrect: false 
-              };
-            })
-          ].sort(() => Math.random() - 0.5);
-          
-          setOptions(allOptions);
-          setSelectedOption(null);
-          setIsCorrect(null);
-        }, 500);
-      } else if (nextIndex < lines.length) {
-        // Next is also staff, auto-advance
-        setTimeout(() => setCurrentIndex(nextIndex), 800);
-      } else {
-        // End of conversation
-        setTimeout(() => setIsComplete(true), 800);
-      }
+    // Display all staff lines before the first guest response
+    const firstGuestIndex = guestIndices[0];
+    const initialLines = [];
+    for (let i = 0; i < firstGuestIndex; i++) {
+      initialLines.push(i);
     }
-  }, [currentIndex, lines]);
+    setDisplayedLines(initialLines);
+    setCurrentQuestionIndex(0);
+    generateOptions(firstGuestIndex);
+  }, []);
 
   // Scroll to bottom when new messages appear
   useEffect(() => {
@@ -92,6 +66,31 @@ export function ConversationPractice({
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [displayedLines, options]);
+
+  const generateOptions = (guestIndex: number) => {
+    const correctLine = lines[guestIndex];
+    const wrongOptions = generateWrongOptions(
+      correctLine.english,
+      lines,
+      'staff'
+    );
+    
+    const allOptions: Option[] = [
+      { text: correctLine.english, vietnamese: correctLine.vietnamese, isCorrect: true },
+      ...wrongOptions.map(text => {
+        const matchingLine = lines.find(l => l.english === text);
+        return { 
+          text, 
+          vietnamese: matchingLine?.vietnamese,
+          isCorrect: false 
+        };
+      })
+    ].sort(() => Math.random() - 0.5);
+    
+    setOptions(allOptions);
+    setSelectedOption(null);
+    setIsCorrect(null);
+  };
 
   const handleOptionSelect = (index: number) => {
     if (selectedOption !== null) return;
@@ -106,51 +105,90 @@ export function ConversationPractice({
   };
 
   const handleContinue = () => {
-    // Add the guest response to displayed lines
-    const nextIndex = currentIndex + 1;
-    setDisplayedLines(prev => [...prev, nextIndex]);
-    setOptions([]);
+    const currentGuestIndex = guestIndices[currentQuestionIndex];
     
-    // Move to the line after the guest response
-    setTimeout(() => setCurrentIndex(nextIndex + 1), 300);
+    // Add guest response to displayed lines
+    setDisplayedLines(prev => [...prev, currentGuestIndex]);
+    
+    // Check if there are more questions
+    const nextQuestionIndex = currentQuestionIndex + 1;
+    
+    if (nextQuestionIndex >= guestIndices.length) {
+      // No more questions - complete
+      setTimeout(() => setIsComplete(true), 500);
+      return;
+    }
+
+    // Add all staff lines between current guest and next guest
+    const nextGuestIndex = guestIndices[nextQuestionIndex];
+    setTimeout(() => {
+      const newLines = [];
+      for (let i = currentGuestIndex + 1; i < nextGuestIndex; i++) {
+        newLines.push(i);
+      }
+      setDisplayedLines(prev => [...prev, ...newLines]);
+      setCurrentQuestionIndex(nextQuestionIndex);
+      
+      setTimeout(() => {
+        generateOptions(nextGuestIndex);
+      }, 300);
+    }, 300);
   };
 
   const handleRestart = () => {
-    setCurrentIndex(0);
     setDisplayedLines([]);
     setOptions([]);
     setSelectedOption(null);
     setIsCorrect(null);
     setScore(0);
     setIsComplete(false);
+    setCurrentQuestionIndex(-1);
+    
+    // Re-initialize
+    setTimeout(() => {
+      const firstGuestIndex = guestIndices[0];
+      const initialLines = [];
+      for (let i = 0; i < firstGuestIndex; i++) {
+        initialLines.push(i);
+      }
+      setDisplayedLines(initialLines);
+      setCurrentQuestionIndex(0);
+      generateOptions(firstGuestIndex);
+    }, 100);
   };
 
-  const totalQuestions = lines.filter((_, i) => 
-    i > 0 && lines[i].speaker === 'guest' && lines[i-1]?.speaker === 'staff'
-  ).length;
+  const scorePercentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
   if (isComplete) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 animate-fade-in">
-        <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center mb-6">
-          <Trophy className="w-10 h-10 text-success" />
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${
+          scorePercentage === 100 ? 'bg-success/20' : 'bg-accent/20'
+        }`}>
+          <Trophy className={`w-10 h-10 ${scorePercentage === 100 ? 'text-success' : 'text-accent'}`} />
         </div>
         
         <h2 className="text-2xl font-serif font-semibold text-foreground mb-2">
-          Conversation Complete!
+          {scorePercentage === 100 ? 'Perfect Score!' : 'Good Effort!'}
         </h2>
         
-        <p className="text-muted-foreground mb-6">
-          You scored {score} out of {totalQuestions}
+        <p className="text-muted-foreground mb-2">
+          You scored {score} out of {totalQuestions} ({scorePercentage}%)
         </p>
         
-        <div className="flex gap-3">
+        {scorePercentage < 100 && (
+          <p className="text-sm text-muted-foreground mb-6">
+            Get 100% to unlock Sentence Structure mode
+          </p>
+        )}
+        
+        <div className="flex gap-3 mt-4">
           <Button variant="outline" onClick={handleRestart} className="gap-2">
             <RotateCcw className="w-4 h-4" />
             Try Again
           </Button>
-          <Button onClick={onBack} className="gap-2">
-            More Conversations
+          <Button onClick={() => onComplete(scorePercentage)} className="gap-2">
+            Continue
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
@@ -163,13 +201,13 @@ export function ConversationPractice({
       {/* Progress bar */}
       <div className="px-4 py-2 bg-card border-b border-border">
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-          <span>{conversation.title}</span>
-          <span>{Math.round((displayedLines.length / lines.length) * 100)}%</span>
+          <span>Select Responses</span>
+          <span>{currentQuestionIndex + 1} / {totalQuestions}</span>
         </div>
         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
           <div 
             className="h-full bg-accent transition-all duration-500 ease-out rounded-full"
-            style={{ width: `${(displayedLines.length / lines.length) * 100}%` }}
+            style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
           />
         </div>
       </div>
