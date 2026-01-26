@@ -41,6 +41,10 @@
     --earth: 25 35% 35%;
     --earth-foreground: 40 30% 98%;
 
+    /* Warning - amber/gold for partial progress */
+    --warning: 38 92% 50%;
+    --warning-foreground: 20 10% 15%;
+
     /* Staff message bubble */
     --staff-bubble: 145 20% 92%;
     --staff-bubble-foreground: 145 30% 20%;
