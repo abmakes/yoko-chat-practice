@@ -16,6 +16,30 @@ interface WordTile {
   isSelected: boolean;
 }
 
+const MAX_TILES = 12;
+
+/**
+ * Returns at most MAX_TILES chunks. If the sentence has more than MAX_TILES words,
+ * some consecutive words are grouped so the total number of selectable tiles is MAX_TILES.
+ * E.g. 15 words → 3 two-word chunks + 9 single-word chunks = 12 tiles.
+ */
+function getChunksForSentence(sentence: string): string[] {
+  const words = sentence.split(/\s+/).filter(w => w.length > 0);
+  if (words.length <= MAX_TILES) return words;
+  const numDouble = words.length - MAX_TILES;
+  const chunks: string[] = [];
+  let i = 0;
+  for (let d = 0; d < numDouble; d++) {
+    chunks.push(words[i] + ' ' + words[i + 1]);
+    i += 2;
+  }
+  while (i < words.length) {
+    chunks.push(words[i]);
+    i++;
+  }
+  return chunks;
+}
+
 export function SentenceStructureMode({ 
   conversation, 
   showVietnamese, 
@@ -31,49 +55,52 @@ export function SentenceStructureMode({
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const lines = conversation.lines;
 
-  // Find all guest response indices
-  const guestIndices = lines
+  // Find all staff response indices (sentence structure = practice staff lines)
+  const staffIndices = lines
     .map((line, index) => ({ line, index }))
-    .filter(item => item.line.speaker === 'guest')
+    .filter(item => item.line.speaker === 'staff')
     .map(item => item.index);
 
   // Initialize
   useEffect(() => {
-    if (guestIndices.length === 0) {
+    if (staffIndices.length === 0) {
       setIsComplete(true);
       return;
     }
 
-    setTotalQuestions(guestIndices.length);
+    setTotalQuestions(staffIndices.length);
     
-    const firstGuestIndex = guestIndices[0];
+    const firstStaffIndex = staffIndices[0];
     const initialLines = [];
-    for (let i = 0; i < firstGuestIndex; i++) {
+    for (let i = 0; i < firstStaffIndex; i++) {
       initialLines.push(i);
     }
     setDisplayedLines(initialLines);
     setCurrentQuestionIndex(0);
-    generateWordTiles(firstGuestIndex);
+    generateWordTiles(firstStaffIndex);
   }, []);
 
-  // Scroll to bottom
+  // Auto-scroll so new message is visible
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
+    const el = bottomRef.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
+    return () => cancelAnimationFrame(id);
   }, [displayedLines]);
 
-  const generateWordTiles = (guestIndex: number) => {
-    const sentence = lines[guestIndex].english;
-    // Split into words, preserving punctuation attached to words
-    const words = sentence.split(/\s+/).filter(w => w.length > 0);
-    
-    const tiles: WordTile[] = words.map((word, index) => ({
-      id: `${index}-${word}`,
-      word,
+  const generateWordTiles = (staffIndex: number) => {
+    const sentence = lines[staffIndex].english;
+    const chunks = getChunksForSentence(sentence);
+
+    const tiles: WordTile[] = chunks.map((chunk, index) => ({
+      id: `${index}-${chunk}`,
+      word: chunk,
       isSelected: false,
     }));
 
@@ -114,8 +141,8 @@ export function SentenceStructureMode({
   };
 
   const handleSubmit = () => {
-    const guestIndex = guestIndices[currentQuestionIndex];
-    const correctSentence = lines[guestIndex].english;
+    const staffIndex = staffIndices[currentQuestionIndex];
+    const correctSentence = lines[staffIndex].english;
     const userSentence = selectedWords.map(t => t.word).join(' ');
     
     const correct = userSentence === correctSentence;
@@ -128,29 +155,29 @@ export function SentenceStructureMode({
   };
 
   const handleContinue = () => {
-    const currentGuestIndex = guestIndices[currentQuestionIndex];
+    const currentStaffIndex = staffIndices[currentQuestionIndex];
     
-    // Add guest response to displayed lines
-    setDisplayedLines(prev => [...prev, currentGuestIndex]);
+    // Add staff response to displayed lines
+    setDisplayedLines(prev => [...prev, currentStaffIndex]);
     
     const nextQuestionIndex = currentQuestionIndex + 1;
     
-    if (nextQuestionIndex >= guestIndices.length) {
+    if (nextQuestionIndex >= staffIndices.length) {
       setTimeout(() => setIsComplete(true), 500);
       return;
     }
 
-    const nextGuestIndex = guestIndices[nextQuestionIndex];
+    const nextStaffIndex = staffIndices[nextQuestionIndex];
     setTimeout(() => {
       const newLines = [];
-      for (let i = currentGuestIndex + 1; i < nextGuestIndex; i++) {
+      for (let i = currentStaffIndex + 1; i < nextStaffIndex; i++) {
         newLines.push(i);
       }
       setDisplayedLines(prev => [...prev, ...newLines]);
       setCurrentQuestionIndex(nextQuestionIndex);
       
       setTimeout(() => {
-        generateWordTiles(nextGuestIndex);
+        generateWordTiles(nextStaffIndex);
       }, 300);
     }, 300);
   };
@@ -166,14 +193,14 @@ export function SentenceStructureMode({
     setCurrentQuestionIndex(-1);
     
     setTimeout(() => {
-      const firstGuestIndex = guestIndices[0];
+      const firstStaffIndex = staffIndices[0];
       const initialLines = [];
-      for (let i = 0; i < firstGuestIndex; i++) {
+      for (let i = 0; i < firstStaffIndex; i++) {
         initialLines.push(i);
       }
       setDisplayedLines(initialLines);
       setCurrentQuestionIndex(0);
-      generateWordTiles(firstGuestIndex);
+      generateWordTiles(firstStaffIndex);
     }, 100);
   };
 
@@ -208,12 +235,12 @@ export function SentenceStructureMode({
     );
   }
 
-  const currentGuestLine = currentQuestionIndex >= 0 ? lines[guestIndices[currentQuestionIndex]] : null;
+  const currentStaffLine = currentQuestionIndex >= 0 ? lines[staffIndices[currentQuestionIndex]] : null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Progress bar */}
-      <div className="px-4 py-2 bg-card border-b border-border">
+      <div className="shrink-0 px-4 py-2 bg-card border-b border-border">
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
           <span>Sentence Structure</span>
           <span>{currentQuestionIndex + 1} / {totalQuestions}</span>
@@ -226,10 +253,10 @@ export function SentenceStructureMode({
         </div>
       </div>
 
-      {/* Chat area */}
+      {/* Chat area - scrolls; fills space between progress and tiles */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 scrollbar-hide"
+        className="min-h-0 flex-1 overflow-y-auto p-4 scrollbar-hide"
       >
         {displayedLines.map((lineIndex) => (
           <ChatBubble
@@ -239,19 +266,20 @@ export function SentenceStructureMode({
             isNew={lineIndex === displayedLines[displayedLines.length - 1]}
           />
         ))}
+        <div ref={bottomRef} aria-hidden="true" className="h-1 shrink-0" />
       </div>
 
-      {/* Word tiles area */}
+      {/* Word tiles area - sticky at bottom */}
       {wordTiles.length > 0 && (
-        <div className="border-t border-border bg-card/80 backdrop-blur-sm p-4 space-y-4 animate-slide-up">
+        <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur-sm p-4 space-y-4 animate-slide-up">
           <p className="text-sm text-muted-foreground text-center">
-            Arrange the words to form the correct response
+            Arrange the words to form your (staff) response
           </p>
 
           {/* Vietnamese hint */}
-          {showVietnamese && currentGuestLine?.vietnamese && (
+          {showVietnamese && currentStaffLine?.vietnamese && (
             <p className="text-sm text-center text-muted-foreground italic">
-              {currentGuestLine.vietnamese}
+              {currentStaffLine.vietnamese}
             </p>
           )}
 
@@ -282,7 +310,7 @@ export function SentenceStructureMode({
               ))}
               {selectedWords.length === 0 && (
                 <span className="text-muted-foreground text-sm">
-                  Tap words below to build your response
+                  Tap words below to build the staff response
                 </span>
               )}
             </div>
@@ -301,7 +329,7 @@ export function SentenceStructureMode({
               ) : (
                 <>
                   <X className="w-4 h-4" />
-                  <span>Correct answer: {lines[guestIndices[currentQuestionIndex]].english}</span>
+                  <span>Correct answer: {lines[staffIndices[currentQuestionIndex]].english}</span>
                 </>
               )}
             </div>

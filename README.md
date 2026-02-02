@@ -60,9 +60,24 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Setup (Supabase & Vercel)
+
+**Supabase (progress storage):**
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL Editor, run the script in `supabase-schema.sql` to create the `progress` table.
+3. Copy your project URL and anon public key from Project Settings > API.
+4. Create a `.env` file (see `.env.example`) and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+
+**Groups and students:** Edit `src/data/groups.ts` to set your two groups and student names (fixed config).
+
+**Vercel:** Connect the repo to Vercel, set build command to `npm run build` and output directory to `dist`. Add the same env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) in the Vercel project settings.
+
+**Add conversations:** Staff go to `/add` (no link in the student UI). Use the JSON format guide there to paste LLM-generated conversations.
+
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish. Or deploy to Vercel (see Setup above).
 
 ## Can I connect a custom domain to my Lovable project?
 

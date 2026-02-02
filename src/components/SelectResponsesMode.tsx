@@ -31,6 +31,7 @@ export function SelectResponsesMode({
   const [isComplete, setIsComplete] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(-1);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const lines = conversation.lines;
 
@@ -69,11 +70,14 @@ export function SelectResponsesMode({
     generateOptions(firstStaffToAnswer);
   }, []);
 
-  // Scroll to bottom when new messages appear
+  // Auto-scroll so new message is visible
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
+    const el = bottomRef.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
+    return () => cancelAnimationFrame(id);
   }, [displayedLines, options]);
 
   const generateOptions = (staffIndex: number) => {
@@ -213,9 +217,9 @@ export function SelectResponsesMode({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Progress bar */}
-      <div className="px-4 py-2 bg-card border-b border-border">
+      <div className="shrink-0 px-4 py-2 bg-card border-b border-border">
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
           <span>Select Responses</span>
           <span>{currentQuestionIndex + 1} / {totalQuestions}</span>
@@ -228,10 +232,10 @@ export function SelectResponsesMode({
         </div>
       </div>
 
-      {/* Chat area */}
+      {/* Chat area - scrolls; fills space between progress and options */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 scrollbar-hide"
+        className="min-h-0 flex-1 overflow-y-auto p-4 scrollbar-hide"
       >
         {displayedLines.map((lineIndex) => (
           <ChatBubble
@@ -241,11 +245,12 @@ export function SelectResponsesMode({
             isNew={lineIndex === displayedLines[displayedLines.length - 1]}
           />
         ))}
+        <div ref={bottomRef} aria-hidden="true" className="h-1 shrink-0" />
       </div>
 
-      {/* Options area */}
+      {/* Options area - sticky at bottom */}
       {options.length > 0 && (
-        <div className="border-t border-border bg-card/80 backdrop-blur-sm p-4 space-y-3 animate-slide-up">
+        <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur-sm p-4 space-y-3 animate-slide-up">
           <p className="text-sm text-muted-foreground text-center mb-3">
             How should you (staff) respond?
           </p>

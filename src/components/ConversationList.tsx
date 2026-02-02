@@ -1,14 +1,17 @@
 import { Conversation } from '@/data/conversations';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MessageCircle, ChevronRight, User } from 'lucide-react';
 
 interface ConversationListProps {
   conversations: Conversation[];
   onSelect: (conversation: Conversation) => void;
   getOverallProgress: (conversationId: string) => number;
+  studentName?: string | null;
+  onSwitchStudent?: () => void;
 }
 
-export function ConversationList({ conversations, onSelect, getOverallProgress }: ConversationListProps) {
+export function ConversationList({ conversations, onSelect, getOverallProgress, studentName, onSwitchStudent }: ConversationListProps) {
   const getProgressBorderClass = (progress: number): string => {
     switch (progress) {
       case 1:
@@ -37,6 +40,25 @@ export function ConversationList({ conversations, onSelect, getOverallProgress }
 
   return (
     <div className="p-4 space-y-3">
+      {studentName != null && onSwitchStudent && (
+        <div className="flex items-center justify-between gap-2 mb-4 p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="flex items-center gap-2 min-w-0">
+            <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm text-muted-foreground truncate">
+              Signed in as <span className="font-medium text-foreground">{studentName}</span>
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onSwitchStudent}
+            className="text-muted-foreground hover:text-foreground flex-shrink-0 text-xs"
+          >
+            Not you? Switch student
+          </Button>
+        </div>
+      )}
+
       <div className="text-center mb-6">
         <h2 className="text-xl font-serif font-semibold text-foreground mb-1">
           Select a Conversation

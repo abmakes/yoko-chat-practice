@@ -5,8 +5,9 @@ import { ModeSelection } from '@/components/ModeSelection';
 import { PracticeMode } from '@/components/PracticeMode';
 import { SelectResponsesMode } from '@/components/SelectResponsesMode';
 import { SentenceStructureMode } from '@/components/SentenceStructureMode';
-import { AddConversationDialog } from '@/components/AddConversationDialog';
-import { sampleConversations, Conversation } from '@/data/conversations';
+import { useConversations } from '@/contexts/ConversationsContext';
+import { useStudentIdentity } from '@/contexts/StudentIdentityContext';
+import { Conversation } from '@/data/conversations';
 import { LearningMode, useConversationProgress } from '@/hooks/useConversationProgress';
 
 type ViewState = 
@@ -15,15 +16,11 @@ type ViewState =
   | { type: 'learning'; conversation: Conversation; mode: LearningMode };
 
 const Index = () => {
+  const { conversations, isLoading } = useConversations();
+  const { studentName, clearIdentity } = useStudentIdentity();
   const [showVietnamese, setShowVietnamese] = useState(false);
-  const [conversations, setConversations] = useState<Conversation[]>(sampleConversations);
   const [viewState, setViewState] = useState<ViewState>({ type: 'list' });
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const { completeMode, getOverallProgress, getProgress, isModeUnlocked } = useConversationProgress();
-
-  const handleAddConversation = (conversation: Conversation) => {
-    setConversations(prev => [...prev, conversation]);
-  };
 
   const handleBack = () => {
     if (viewState.type === 'learning') {
@@ -67,11 +64,20 @@ const Index = () => {
   const renderContent = () => {
     switch (viewState.type) {
       case 'list':
+        if (isLoading) {
+          return (
+            <div className="flex flex-1 items-center justify-center p-6">
+              <p className="text-sm text-muted-foreground">Loading conversations...</p>
+            </div>
+          );
+        }
         return (
           <ConversationList
             conversations={conversations}
             onSelect={handleSelectConversation}
             getOverallProgress={getOverallProgress}
+            studentName={studentName}
+            onSwitchStudent={clearIdentity}
           />
         );
       case 'modeSelection':
@@ -114,24 +120,17 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col">
+    <div className="flex h-screen max-h-dvh max-w-lg mx-auto flex-col overflow-hidden bg-background">
       <Header
         showVietnamese={showVietnamese}
         onToggleVietnamese={() => setShowVietnamese(!showVietnamese)}
         showBack={viewState.type !== 'list'}
         onBack={handleBack}
-        onAddConversation={() => setShowAddDialog(true)}
       />
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {renderContent()}
       </main>
-
-      <AddConversationDialog
-        open={showAddDialog}
-        onClose={() => setShowAddDialog(false)}
-        onAdd={handleAddConversation}
-      />
     </div>
   );
 };

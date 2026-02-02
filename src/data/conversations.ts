@@ -7,6 +7,8 @@ export interface ConversationLine {
 export interface Conversation {
   id: string;
   title: string;
+  description?: string;
+  unit?: string;
   lines: ConversationLine[];
 }
 
