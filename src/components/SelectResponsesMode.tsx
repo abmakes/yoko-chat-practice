@@ -34,31 +34,39 @@ export function SelectResponsesMode({
 
   const lines = conversation.lines;
 
-  // Find all staff response indices (these are the questions - students ARE staff)
-  const staffIndices = lines
+  // Find staff responses that come AFTER a guest has spoken (students respond to guests)
+  // Skip the first staff line if conversation starts with staff
+  const staffIndicesAfterGuest = lines
     .map((line, index) => ({ line, index }))
-    .filter(item => item.line.speaker === 'staff')
+    .filter(item => {
+      if (item.line.speaker !== 'staff') return false;
+      // Check if there's at least one guest line before this staff line
+      const hasGuestBefore = lines.slice(0, item.index).some(l => l.speaker === 'guest');
+      return hasGuestBefore;
+    })
     .map(item => item.index);
 
-  // Initialize - if staff speaks first, show options immediately; otherwise show guest lines first
+  // Initialize - display all lines up to and including the first guest, then ask for staff response
   useEffect(() => {
-    if (staffIndices.length === 0) {
+    if (staffIndicesAfterGuest.length === 0) {
+      // No staff responses after guests - just complete
+      setDisplayedLines(lines.map((_, i) => i));
       setIsComplete(true);
       return;
     }
 
-    setTotalQuestions(staffIndices.length);
+    setTotalQuestions(staffIndicesAfterGuest.length);
     
-    const firstStaffIndex = staffIndices[0];
+    const firstStaffToAnswer = staffIndicesAfterGuest[0];
     
-    // Display all guest lines before the first staff response
+    // Display all lines before this staff response (includes opening staff greeting + guest response)
     const initialLines = [];
-    for (let i = 0; i < firstStaffIndex; i++) {
+    for (let i = 0; i < firstStaffToAnswer; i++) {
       initialLines.push(i);
     }
     setDisplayedLines(initialLines);
     setCurrentQuestionIndex(0);
-    generateOptions(firstStaffIndex);
+    generateOptions(firstStaffToAnswer);
   }, []);
 
   // Scroll to bottom when new messages appear
@@ -106,7 +114,7 @@ export function SelectResponsesMode({
   };
 
   const handleContinue = () => {
-    const currentStaffIndex = staffIndices[currentQuestionIndex];
+    const currentStaffIndex = staffIndicesAfterGuest[currentQuestionIndex];
     
     // Add staff response to displayed lines
     setDisplayedLines(prev => [...prev, currentStaffIndex]);
@@ -114,7 +122,7 @@ export function SelectResponsesMode({
     // Check if there are more questions
     const nextQuestionIndex = currentQuestionIndex + 1;
     
-    if (nextQuestionIndex >= staffIndices.length) {
+    if (nextQuestionIndex >= staffIndicesAfterGuest.length) {
       // No more questions - add any remaining lines and complete
       const remainingLines = [];
       for (let i = currentStaffIndex + 1; i < lines.length; i++) {
@@ -127,8 +135,8 @@ export function SelectResponsesMode({
       return;
     }
 
-    // Add all guest lines between current staff and next staff response
-    const nextStaffIndex = staffIndices[nextQuestionIndex];
+    // Add all lines between current staff and next staff response to answer
+    const nextStaffIndex = staffIndicesAfterGuest[nextQuestionIndex];
     setTimeout(() => {
       const newLines = [];
       for (let i = currentStaffIndex + 1; i < nextStaffIndex; i++) {
@@ -154,14 +162,14 @@ export function SelectResponsesMode({
     
     // Re-initialize
     setTimeout(() => {
-      const firstStaffIndex = staffIndices[0];
+      const firstStaffToAnswer = staffIndicesAfterGuest[0];
       const initialLines = [];
-      for (let i = 0; i < firstStaffIndex; i++) {
+      for (let i = 0; i < firstStaffToAnswer; i++) {
         initialLines.push(i);
       }
       setDisplayedLines(initialLines);
       setCurrentQuestionIndex(0);
-      generateOptions(firstStaffIndex);
+      generateOptions(firstStaffToAnswer);
     }, 100);
   };
 
