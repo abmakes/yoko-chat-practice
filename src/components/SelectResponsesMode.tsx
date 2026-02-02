@@ -34,30 +34,31 @@ export function SelectResponsesMode({
 
   const lines = conversation.lines;
 
-  // Find all guest response indices (these are the questions)
-  const guestIndices = lines
+  // Find all staff response indices (these are the questions - students ARE staff)
+  const staffIndices = lines
     .map((line, index) => ({ line, index }))
-    .filter(item => item.line.speaker === 'guest')
+    .filter(item => item.line.speaker === 'staff')
     .map(item => item.index);
 
-  // Initialize - display lines up to first guest response
+  // Initialize - if staff speaks first, show options immediately; otherwise show guest lines first
   useEffect(() => {
-    if (guestIndices.length === 0) {
+    if (staffIndices.length === 0) {
       setIsComplete(true);
       return;
     }
 
-    setTotalQuestions(guestIndices.length);
+    setTotalQuestions(staffIndices.length);
     
-    // Display all staff lines before the first guest response
-    const firstGuestIndex = guestIndices[0];
+    const firstStaffIndex = staffIndices[0];
+    
+    // Display all guest lines before the first staff response
     const initialLines = [];
-    for (let i = 0; i < firstGuestIndex; i++) {
+    for (let i = 0; i < firstStaffIndex; i++) {
       initialLines.push(i);
     }
     setDisplayedLines(initialLines);
     setCurrentQuestionIndex(0);
-    generateOptions(firstGuestIndex);
+    generateOptions(firstStaffIndex);
   }, []);
 
   // Scroll to bottom when new messages appear
@@ -67,12 +68,12 @@ export function SelectResponsesMode({
     }
   }, [displayedLines, options]);
 
-  const generateOptions = (guestIndex: number) => {
-    const correctLine = lines[guestIndex];
+  const generateOptions = (staffIndex: number) => {
+    const correctLine = lines[staffIndex];
     const wrongOptions = generateWrongOptions(
       correctLine.english,
       lines,
-      'staff'
+      'guest' // Get wrong options from guest lines to create plausible distractors
     );
     
     const allOptions: Option[] = [
@@ -105,32 +106,39 @@ export function SelectResponsesMode({
   };
 
   const handleContinue = () => {
-    const currentGuestIndex = guestIndices[currentQuestionIndex];
+    const currentStaffIndex = staffIndices[currentQuestionIndex];
     
-    // Add guest response to displayed lines
-    setDisplayedLines(prev => [...prev, currentGuestIndex]);
+    // Add staff response to displayed lines
+    setDisplayedLines(prev => [...prev, currentStaffIndex]);
     
     // Check if there are more questions
     const nextQuestionIndex = currentQuestionIndex + 1;
     
-    if (nextQuestionIndex >= guestIndices.length) {
-      // No more questions - complete
+    if (nextQuestionIndex >= staffIndices.length) {
+      // No more questions - add any remaining lines and complete
+      const remainingLines = [];
+      for (let i = currentStaffIndex + 1; i < lines.length; i++) {
+        remainingLines.push(i);
+      }
+      if (remainingLines.length > 0) {
+        setDisplayedLines(prev => [...prev, ...remainingLines]);
+      }
       setTimeout(() => setIsComplete(true), 500);
       return;
     }
 
-    // Add all staff lines between current guest and next guest
-    const nextGuestIndex = guestIndices[nextQuestionIndex];
+    // Add all guest lines between current staff and next staff response
+    const nextStaffIndex = staffIndices[nextQuestionIndex];
     setTimeout(() => {
       const newLines = [];
-      for (let i = currentGuestIndex + 1; i < nextGuestIndex; i++) {
+      for (let i = currentStaffIndex + 1; i < nextStaffIndex; i++) {
         newLines.push(i);
       }
       setDisplayedLines(prev => [...prev, ...newLines]);
       setCurrentQuestionIndex(nextQuestionIndex);
       
       setTimeout(() => {
-        generateOptions(nextGuestIndex);
+        generateOptions(nextStaffIndex);
       }, 300);
     }, 300);
   };
@@ -146,14 +154,14 @@ export function SelectResponsesMode({
     
     // Re-initialize
     setTimeout(() => {
-      const firstGuestIndex = guestIndices[0];
+      const firstStaffIndex = staffIndices[0];
       const initialLines = [];
-      for (let i = 0; i < firstGuestIndex; i++) {
+      for (let i = 0; i < firstStaffIndex; i++) {
         initialLines.push(i);
       }
       setDisplayedLines(initialLines);
       setCurrentQuestionIndex(0);
-      generateOptions(firstGuestIndex);
+      generateOptions(firstStaffIndex);
     }, 100);
   };
 
@@ -231,7 +239,7 @@ export function SelectResponsesMode({
       {options.length > 0 && (
         <div className="border-t border-border bg-card/80 backdrop-blur-sm p-4 space-y-3 animate-slide-up">
           <p className="text-sm text-muted-foreground text-center mb-3">
-            How should the guest respond?
+            How should you (staff) respond?
           </p>
           
           {options.map((option, index) => (
