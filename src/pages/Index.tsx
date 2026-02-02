@@ -19,7 +19,7 @@ const Index = () => {
   const [conversations, setConversations] = useState<Conversation[]>(sampleConversations);
   const [viewState, setViewState] = useState<ViewState>({ type: 'list' });
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const { completeMode, getOverallProgress } = useConversationProgress();
+  const { completeMode, getOverallProgress, getProgress, isModeUnlocked } = useConversationProgress();
 
   const handleAddConversation = (conversation: Conversation) => {
     setConversations(prev => [...prev, conversation]);
@@ -79,6 +79,8 @@ const Index = () => {
           <ModeSelection
             conversation={viewState.conversation}
             onSelectMode={handleSelectMode}
+            progress={getProgress(viewState.conversation.id)}
+            isModeUnlocked={isModeUnlocked}
           />
         );
       case 'learning':

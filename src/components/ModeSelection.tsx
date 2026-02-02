@@ -1,11 +1,13 @@
 import { Conversation } from '@/data/conversations';
-import { LearningMode, useConversationProgress } from '@/hooks/useConversationProgress';
+import { LearningMode, ConversationProgress } from '@/hooks/useConversationProgress';
 import { Card } from '@/components/ui/card';
 import { BookOpen, MessageSquare, Puzzle, Lock, CheckCircle2 } from 'lucide-react';
 
 interface ModeSelectionProps {
   conversation: Conversation;
   onSelectMode: (mode: LearningMode) => void;
+  progress: ConversationProgress;
+  isModeUnlocked: (conversationId: string, mode: LearningMode) => boolean;
 }
 
 interface ModeCardProps {
@@ -61,9 +63,7 @@ function ModeCard({ title, description, icon, isLocked, isCompleted, bestScore, 
   );
 }
 
-export function ModeSelection({ conversation, onSelectMode }: ModeSelectionProps) {
-  const { isModeUnlocked, getProgress } = useConversationProgress();
-  const progress = getProgress(conversation.id);
+export function ModeSelection({ conversation, onSelectMode, progress, isModeUnlocked }: ModeSelectionProps) {
 
   const modes: { mode: LearningMode; title: string; description: string; icon: React.ReactNode }[] = [
     {
