@@ -32,11 +32,11 @@ export function Header({
           
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-serif font-bold text-sm">陽</span>
+              <span className="text-primary-foreground p-1 font-serif font-bold text-sm">習</span>
             </div>
             <div>
               <h1 className="font-serif font-semibold text-foreground text-sm leading-tight">
-                YOKO
+                YOKO ONSEN
               </h1>
               <p className="text-[10px] text-muted-foreground leading-tight">
                 English Practice

@@ -7,7 +7,7 @@ export interface Group {
 export const groups: Group[] = [
   {
     id: 'group1',
-    label: 'Group One – Monday Wednesday',
+    label: 'Group 1 – Monday & Wednesday',
     studentNames: [
       'ADMIN',
       'Tuấn',
@@ -38,7 +38,7 @@ export const groups: Group[] = [
   },
   {
     id: 'group2',
-    label: 'Group Two – Wednesday Thursday',
+    label: 'Group 2 – Tuesday & Thursday',
     studentNames: [
       'Mia',
       'Thị Uyên',
