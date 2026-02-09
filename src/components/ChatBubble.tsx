@@ -22,7 +22,7 @@ export function ChatBubble({ line, showVietnamese, isNew = false }: ChatBubblePr
         'text-xs font-medium mb-1 px-1',
         isStaff ? 'text-accent' : 'text-primary'
       )}>
-        {isStaff ? 'Staff' : 'Guest'}
+        {isStaff ? 'Staff' : 'Speaker'}
       </span>
       
       <div className={cn(

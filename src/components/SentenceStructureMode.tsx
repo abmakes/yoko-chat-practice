@@ -19,25 +19,31 @@ interface WordTile {
 const MAX_TILES = 12;
 
 /**
- * Returns at most MAX_TILES chunks. If the sentence has more than MAX_TILES words,
- * some consecutive words are grouped so the total number of selectable tiles is MAX_TILES.
- * E.g. 15 words → 3 two-word chunks + 9 single-word chunks = 12 tiles.
+ * Returns at most MAX_TILES chunks. Starts with single words, then
+ * repeatedly merges neighbouring tiles until the number of tiles
+ * is ≤ MAX_TILES. This naturally creates some 2-word and, for very
+ * long sentences, some 3-word tiles, which keeps the activity
+ * manageable for lower-level students.
  */
 function getChunksForSentence(sentence: string): string[] {
-  const words = sentence.split(/\s+/).filter(w => w.length > 0);
+  const words = sentence.split(/\s+/).filter((w) => w.length > 0);
   if (words.length <= MAX_TILES) return words;
-  const numDouble = words.length - MAX_TILES;
-  const chunks: string[] = [];
+
+  const tiles = [...words]; // start with one word per tile
+
+  // Merge adjacent tiles from left to right until we've reduced
+  // the total number of tiles to MAX_TILES.
   let i = 0;
-  for (let d = 0; d < numDouble; d++) {
-    chunks.push(words[i] + ' ' + words[i + 1]);
-    i += 2;
+  while (tiles.length > MAX_TILES && tiles.length > 1) {
+    if (i >= tiles.length - 1) {
+      i = 0;
+    }
+    tiles[i] = `${tiles[i]} ${tiles[i + 1]}`;
+    tiles.splice(i + 1, 1);
+    i += 1;
   }
-  while (i < words.length) {
-    chunks.push(words[i]);
-    i++;
-  }
-  return chunks;
+
+  return tiles;
 }
 
 export function SentenceStructureMode({ 
@@ -335,19 +341,14 @@ export function SentenceStructureMode({
             </div>
           )}
 
-          {/* Available word tiles */}
+          {/* Available word tiles (unselected only) */}
           {!isSubmitted && (
             <div className="flex flex-wrap gap-2 justify-center">
-              {wordTiles.map((tile) => (
+              {wordTiles.filter((tile) => !tile.isSelected).map((tile) => (
                 <button
                   key={tile.id}
                   onClick={() => handleTileClick(tile)}
-                  disabled={tile.isSelected}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    tile.isSelected
-                      ? 'bg-muted text-muted-foreground opacity-50'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-95'
-                  }`}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-95"
                 >
                   {tile.word}
                 </button>
