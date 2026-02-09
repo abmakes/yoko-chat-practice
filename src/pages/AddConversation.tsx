@@ -39,7 +39,7 @@ const EXAMPLE_JSON = `{
 }`;
 
 export default function AddConversation() {
-  const { addConversation } = useConversations();
+  const { conversations, addConversation, deleteConversation } = useConversations();
   const [title, setTitle] = useState('');
   const [pasteText, setPasteText] = useState('');
   const [jsonText, setJsonText] = useState('');
@@ -85,6 +85,13 @@ export default function AddConversation() {
     }
   };
 
+  const handleDeleteConversation = async (id: string, title: string) => {
+    const confirmed = window.confirm(`Delete conversation "${title}"? This cannot be undone.`);
+    if (!confirmed) return;
+    await deleteConversation(id);
+    toast.success('Conversation deleted.');
+  };
+
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col p-4">
       <header className="flex items-center gap-2 py-3 border-b border-border">
@@ -97,6 +104,46 @@ export default function AddConversation() {
       </header>
 
       <main className="flex-1 py-6 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-lg">Existing conversations</CardTitle>
+            <CardDescription>
+              Manage conversations stored in the database. Deleting a conversation removes it from the list for all students.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {conversations.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No conversations yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {conversations.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {conversation.title}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {conversation.id}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteConversation(conversation.id, conversation.title)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="font-serif text-lg">JSON format guide</CardTitle>

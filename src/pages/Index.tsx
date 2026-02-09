@@ -72,13 +72,15 @@ const Index = () => {
           );
         }
         return (
-          <ConversationList
-            conversations={conversations}
-            onSelect={handleSelectConversation}
-            getOverallProgress={getOverallProgress}
-            studentName={studentName}
-            onSwitchStudent={clearIdentity}
-          />
+          <div className="flex-1 overflow-y-auto">
+            <ConversationList
+              conversations={conversations}
+              onSelect={handleSelectConversation}
+              getOverallProgress={getOverallProgress}
+              studentName={studentName}
+              onSwitchStudent={clearIdentity}
+            />
+          </div>
         );
       case 'modeSelection':
         return (

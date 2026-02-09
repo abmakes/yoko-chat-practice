@@ -14,6 +14,7 @@ interface ConversationsContextValue {
   isLoading: boolean;
   error: string | null;
   addConversation: (conversation: Conversation) => Promise<void>;
+  deleteConversation: (id: string) => Promise<void>;
 }
 
 const ConversationsContext = createContext<ConversationsContextValue | null>(null);
@@ -98,9 +99,24 @@ export function ConversationsProvider({ children }: { children: ReactNode }) {
     setConversations((prev) => [...prev, conversation]);
   }, []);
 
+  const deleteConversation = useCallback(async (id: string) => {
+    if (supabase) {
+      const { error: deleteError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) {
+        console.error('Failed to delete conversation:', deleteError);
+      }
+    }
+
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
   return (
     <ConversationsContext.Provider
-      value={{ conversations, isLoading, error, addConversation }}
+      value={{ conversations, isLoading, error, addConversation, deleteConversation }}
     >
       {children}
     </ConversationsContext.Provider>
